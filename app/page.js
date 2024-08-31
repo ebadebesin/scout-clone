@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import {
-  Box, Container, Typography, TextField, Select, MenuItem, Modal,
+  Box, Container, Typography, TextField, Select, MenuItem, Modal, Checkbox,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
   Grid, IconButton, Fab, Dialog, DialogTitle, DialogContent, DialogActions, Button
 } from '@mui/material';
@@ -15,19 +15,20 @@ import { SignedOut, SignedIn, UserButton } from '@clerk/nextjs';
 import { doc, collection, getDoc, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { db } from '@/firebase';
 
+
 export default function Home() {
   const { isLoaded, isSignedIn, user } = useUser();
   const [pantry, setPantry] = useState([]);
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const handleOpen = () => setOpen(true);
-  const handleClose = () => setOpen(false);
+  // const handleOpen = () => setOpen(true);
+  // const handleClose = () => setOpen(false);
   const [itemName, setItemName] = useState('');
 
-  const [size, setSize] = useState('');
+  const [date, setDate] = useState('');
   const [price, setPrice] = useState('');
   const [sku, setSku] = useState('');
-  const[date, setDate] = useState('');
+  const [size, setSize] = useState('');
 
   const [searchQuery, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -39,6 +40,7 @@ export default function Home() {
     SKU: '',
     purchasePrice: '',
     purchaseDate: '',
+    status: '',
   });
 
   // Update inventory by fetching the latest data
@@ -52,17 +54,15 @@ export default function Home() {
       alert('You must be signed in to add an item.');
       return;
     }
-  
     try {
       const userDocRef = doc(collection(db, 'users'), user.id);
       const userDocSnap = await getDoc(userDocRef);
-  
-      const batch = writeBatch(db);
+      const batch = writeBatch(db); 
   
       const itemData = {
         name: item.name,
         size: item.size,
-        SKU: item.SKU,
+        SKU: item.SKU,  // Ensure 'SKU' is consistent
         purchasePrice: item.purchasePrice,
         purchaseDate: item.purchaseDate,
       };
@@ -75,10 +75,9 @@ export default function Home() {
         batch.set(userDocRef, { items: [itemData] });
       }
   
-      const itemDocRef = doc(collection(userDocRef, 'items'), item.SKU);
-      batch.set(itemDocRef, itemData);
-  
-      await batch.commit();
+      const itemDocRef = doc(collection(userDocRef, 'items'), item.SKU);  // Consistent 'SKU'
+      batch.set(itemDocRef, itemData);  
+      await batch.commit(); 
   
       alert('Item added successfully!');
       await updateInventory(); // Refresh inventory after adding an item
@@ -87,6 +86,7 @@ export default function Home() {
       alert('An error occurred while adding the item. Please try again.');
     }
   };
+  
   
 
   // Get and display the user's inventory
@@ -223,27 +223,34 @@ export default function Home() {
           </Grid>
         </Grid>
 
+        {/* <InventoryTable pantry={displayInventory}/> */}
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
               <TableRow>
+              <TableCell padding="checkbox">
+                <Checkbox />
+              </TableCell>
                 <TableCell>Name</TableCell>
                 <TableCell>Size</TableCell>
                 <TableCell>SKU</TableCell>
                 <TableCell>Purchase Date</TableCell>
                 <TableCell>Purchase Price</TableCell>
-                <TableCell>Status</TableCell>
+                {/* <TableCell>Status</TableCell> */}
               </TableRow>
             </TableHead>
             <TableBody>
               {pantry.map((item, index) => (
                 <TableRow key={index}>
+                  <TableCell padding="checkbox">
+                    <Checkbox />
+                  </TableCell>
                   <TableCell>{item.name}</TableCell>
                   <TableCell>{item.size}</TableCell>
                   <TableCell>{item.SKU}</TableCell>
                   <TableCell>{item.purchaseDate}</TableCell>
                   <TableCell>{item.purchasePrice}</TableCell>
-                  <TableCell>{item.status}</TableCell>
+                  {/* <TableCell>{item.status}</TableCell> */}
 
                 </TableRow>
               ))}
@@ -262,104 +269,60 @@ export default function Home() {
         </Fab>
       </Box>
 
+
   {/* Modal for adding an item */}
   <Modal open={openDialog} onClose={handleCloseDialog}>
-        <Box sx={{ padding: '20px', backgroundColor: 'white', margin: '100px auto', maxWidth: '400px' }}>
-          <Typography variant="h6">Add New Item</Typography>
-          <TextField
-            label="Item Name"
-            fullWidth
-            value={itemName}
-            onChange={(e) => setItemName(e.target.value)}
-            sx={{ marginBottom: '10px' }}
-          />
-          <TextField
-            label="Size"
-            fullWidth
-            value={size}
-            onChange={(e) => setSize(e.target.value)}
-            sx={{ marginBottom: '10px' }}
-          />
-          <TextField
-            label="SKU"
-            fullWidth
-            value={sku}
-            onChange={(e) => setSku(e.target.value)}
-            sx={{ marginBottom: '10px' }}
-          />
-          <TextField
-            label="Purchase Price"
-            fullWidth
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-            sx={{ marginBottom: '10px' }}
-          />
-          <TextField
-            label="Purchase Date"
-            fullWidth
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            sx={{ marginBottom: '10px' }}
-          />
-          {/* Add other fields (size, SKU, etc.) here */}
-          <Button onClick={handleCloseDialog}>Cancel</Button>
-          <Button
-            onClick={() => {
-              addItem({ name: itemName, size: size, SKU: sku, purchasePrice: price, purchaseDate: date });
-              handleCloseDialog();
-            }}
-          >
-            Add
-          </Button>
-        </Box>
-      </Modal>
-      {/* Add Item Dialog */}
-      {/* <Dialog open={openDialog} onClose={handleCloseDialog}>
-        <DialogTitle>Add New Item</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Name"
-            fullWidth
-            value={newItem.name}
-            onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
-          />
-          <TextField
-            margin="dense"
-            label="Size"
-            fullWidth
-            value={newItem.size}
-            onChange={(e) => setNewItem({ ...newItem, size: e.target.value })}
-          />
-          <TextField
-            margin="dense"
-            label="SKU"
-            fullWidth
-            value={newItem.SKU}
-            onChange={(e) => setNewItem({ ...newItem, SKU: e.target.value })}
-          />
-          <TextField
-            margin="dense"
-            label="Purchase Price"
-            fullWidth
-            value={newItem.purchasePrice}
-            onChange={(e) => setNewItem({ ...newItem, purchasePrice: e.target.value })}
-          />
-          <TextField
-            margin="dense"
-            label="Purchase Date"
-            fullWidth
-            value={newItem.purchaseDate}
-            onChange={(e) => setNewItem({ ...newItem, purchaseDate: e.target.value })}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
-          <Button onClick={addItem}>Save</Button>
-        </DialogActions>
-      </Dialog> 
-      */}
+  <Box sx={{ padding: '20px', backgroundColor: 'white', margin: '100px auto', maxWidth: '400px' }}>
+    <Typography variant="h6">Add New Item</Typography>
+    <TextField
+      label="Item Name"
+      fullWidth
+      value={itemName}
+      onChange={(e) => setItemName(e.target.value)}
+      sx={{ marginBottom: '10px' }}
+    />
+    <TextField
+      label="Size"
+      fullWidth
+      value={size}
+      onChange={(e) => setSize(e.target.value)}
+      sx={{ marginBottom: '10px' }}
+    />
+    <TextField
+      label="SKU"
+      fullWidth
+      value={sku}
+      onChange={(e) => setSku(e.target.value)}
+      sx={{ marginBottom: '10px' }}
+    />
+    <TextField
+      label="Purchase Price"
+      fullWidth
+      value={price}
+      type='text'
+      onChange={(e) => setPrice(e.target.value)}
+      sx={{ marginBottom: '10px' }}
+    />
+    <TextField
+      label="Purchase Date"
+      fullWidth
+      value={date}
+      type='date'
+      onChange={(e) => setDate(e.target.value)}
+      sx={{ marginBottom: '10px' }}
+    />
+    <Button onClick={handleCloseDialog}>Cancel</Button>
+    <Button
+      onClick={() => {
+        addItem({ name: itemName, size: size, SKU: sku, purchasePrice: price, purchaseDate: date });
+        handleCloseDialog();
+      }}
+    >
+      Add
+    </Button>
+    </Box>
+    </Modal>
+
     </Box>
   );
 }
