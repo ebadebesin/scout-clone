@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useState, useEffect } from 'react';
 import {
@@ -14,23 +14,20 @@ import { useUser } from '@clerk/nextjs';
 import { SignedOut, SignedIn, UserButton } from '@clerk/nextjs';
 import { doc, collection, getDoc, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { db } from '@/firebase';
-
+import SearchBar from '../components/SearchBar'; // Import SearchBar component
 
 export default function Home() {
   const { isLoaded, isSignedIn, user } = useUser();
   const [pantry, setPantry] = useState([]);
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  // const handleOpen = () => setOpen(true);
-  // const handleClose = () => setOpen(false);
   const [itemName, setItemName] = useState('');
-
   const [date, setDate] = useState('');
   const [price, setPrice] = useState('');
   const [sku, setSku] = useState('');
   const [size, setSize] = useState('');
 
-  const [searchQuery, setSearch] = useState('');
+  const [searchQuery, setSearchQuery] = useState(''); // State for managing search query
   const [statusFilter, setStatusFilter] = useState('All');
   const [platformFilter, setPlatformFilter] = useState('All');
   const [openDialog, setOpenDialog] = useState(false);
@@ -86,8 +83,6 @@ export default function Home() {
       alert('An error occurred while adding the item. Please try again.');
     }
   };
-  
-  
 
   // Get and display the user's inventory
   const displayInventory = async () => {
@@ -150,21 +145,12 @@ export default function Home() {
     }
   };
 
-  // Search for an item in the user's inventory
-  const searchItem = async (query) => {
-    if (!isLoaded || !isSignedIn || !user) {
-      alert('You must be signed in to search.');
-      return;
-    }
-
-    try {
-      const filteredItems = pantry.filter(item => item.name.toLowerCase().includes(query.toLowerCase()));
-      setPantry(filteredItems); // Update pantry state with filtered items
-    } catch (error) {
-      console.error('Error searching for item:', error);
-      alert('An error occurred while searching for the item. Please try again.');
-    }
-  };
+  // Filter the inventory based on the search query
+  const filteredInventory = pantry.filter(
+    (item) =>
+      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.SKU.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   // Fetch inventory on component mount or when the user changes
   useEffect(() => {
@@ -182,7 +168,6 @@ export default function Home() {
     setNewItem({ name: itemName, size: size, SKU: sku, purchasePrice: price, purchaseDate: date });
   };
 
-
   return (
     <Box sx={{ display: 'flex', height: '100vh' }}>
       <ResponsiveDrawer />
@@ -192,12 +177,7 @@ export default function Home() {
 
         <Grid container spacing={2} sx={{ marginBottom: 2 }}>
           <Grid item xs={12} sm={6} md={3}>
-            <TextField
-              label="Search"
-              fullWidth
-              value={searchQuery}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+            <SearchBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
           </Grid>
           <Grid item xs={6} sm={3} md={2}>
             <Select
@@ -223,24 +203,22 @@ export default function Home() {
           </Grid>
         </Grid>
 
-        {/* <InventoryTable pantry={displayInventory}/> */}
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
               <TableRow>
-              <TableCell padding="checkbox">
-                <Checkbox />
-              </TableCell>
+                <TableCell padding="checkbox">
+                  <Checkbox />
+                </TableCell>
                 <TableCell>Name</TableCell>
                 <TableCell>Size</TableCell>
                 <TableCell>SKU</TableCell>
                 <TableCell>Purchase Date</TableCell>
                 <TableCell>Purchase Price</TableCell>
-                {/* <TableCell>Status</TableCell> */}
               </TableRow>
             </TableHead>
             <TableBody>
-              {pantry.map((item, index) => (
+              {filteredInventory.map((item, index) => (
                 <TableRow key={index}>
                   <TableCell padding="checkbox">
                     <Checkbox />
@@ -250,8 +228,6 @@ export default function Home() {
                   <TableCell>{item.SKU}</TableCell>
                   <TableCell>{item.purchaseDate}</TableCell>
                   <TableCell>{item.purchasePrice}</TableCell>
-                  {/* <TableCell>{item.status}</TableCell> */}
-
                 </TableRow>
               ))}
             </TableBody>
@@ -267,11 +243,10 @@ export default function Home() {
         >
           <AddIcon />
         </Fab>
-      </Box>
+        </Box>
 
-
-  {/* Modal for adding an item */}
-  <Modal open={openDialog} onClose={handleCloseDialog}>
+{/* Modal for adding an item */}
+<Modal open={openDialog} onClose={handleCloseDialog}>
   <Box sx={{ padding: '20px', backgroundColor: 'white', margin: '100px auto', maxWidth: '400px' }}>
     <Typography variant="h6">Add New Item</Typography>
     <TextField
@@ -299,7 +274,7 @@ export default function Home() {
       label="Purchase Price"
       fullWidth
       value={price}
-      type='text'
+      type="text"
       onChange={(e) => setPrice(e.target.value)}
       sx={{ marginBottom: '10px' }}
     />
@@ -307,7 +282,7 @@ export default function Home() {
       label="Purchase Date"
       fullWidth
       value={date}
-      type='date'
+      type="date"
       onChange={(e) => setDate(e.target.value)}
       sx={{ marginBottom: '10px' }}
     />
@@ -320,9 +295,9 @@ export default function Home() {
     >
       Add
     </Button>
-    </Box>
-    </Modal>
+  </Box>
+</Modal>
 
-    </Box>
-  );
+</Box>
+);
 }
