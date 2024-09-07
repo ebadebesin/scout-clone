@@ -64,12 +64,35 @@ function ResponsiveDrawer(props) {
         {/* make a new line */}
         <br />
         <br />
-        Hello @username
+        @username
       </SignedIn>
       </ListItem>
      </List>
       <Divider />
       <List>
+  <ListItem disablePadding>
+    <Link href="/dashboard" passHref>
+      <ListItemButton>
+        <ListItemIcon>
+          <HomeIcon />
+        </ListItemIcon>
+        <ListItemText primary="Dashboard" />
+      </ListItemButton>
+    </Link>
+  </ListItem>
+
+  <ListItem disablePadding>
+    <Link href="/" passHref>
+      <ListItemButton >
+        <ListItemIcon>
+          <InventoryIcon />
+        </ListItemIcon>
+        <ListItemText primary="Inventory" />
+      </ListItemButton>
+    </Link>
+  </ListItem>
+  </List>
+      {/* <List>
         {['Dashboard', 'Inventory'].map((text, index) => (
           <ListItem key={text} disablePadding>
             <ListItemButton>
@@ -80,33 +103,55 @@ function ResponsiveDrawer(props) {
             </ListItemButton>
           </ListItem>
         ))}
-      </List>
+      </List> */}
       <Divider />
-      <List>
-        {['Spending', 'Sales'].map((text, index) => (
-          <ListItem key={text} disablePadding>
-            <ListItemButton>
-              <ListItemIcon>
-                {index % 2 === 0 ? <PaymentsIcon /> : <PointOfSaleIcon />}
-              </ListItemIcon>
-              <ListItemText primary={text} />
-            </ListItemButton>
-          </ListItem>
-        ))}
-      </List>
+    <List>
+      <ListItem disablePadding>
+        <Link href="/expenses" passHref>
+          <ListItemButton>
+            <ListItemIcon>
+              <PaymentsIcon />
+            </ListItemIcon>
+            <ListItemText primary="Expenses" />
+          </ListItemButton>
+        </Link>
+      </ListItem>
+
+      <ListItem disablePadding>
+        <Link href="/sales" passHref>
+          <ListItemButton>
+            <ListItemIcon>
+              <PointOfSaleIcon />
+            </ListItemIcon>
+            <ListItemText primary="Sales" />
+          </ListItemButton>
+        </Link>
+      </ListItem>
+    </List>
       <Divider />
-      <List>
-        {['All mail', 'Spam'].map((text, index) => (
-          <ListItem key={text} disablePadding>
-            <ListItemButton>
-              <ListItemIcon>
-                {index % 2 === 0 ? <DashboardIcon /> : <MailIcon />}
-              </ListItemIcon>
-              <ListItemText primary={text} />
-            </ListItemButton>
-          </ListItem>
-        ))}
-      </List>
+    <List>
+      <ListItem disablePadding>
+        <Link href="/chatsupport" passHref>
+          <ListItemButton>
+            <ListItemIcon>
+              <PaymentsIcon />
+            </ListItemIcon>
+            <ListItemText primary="Contact us" />
+          </ListItemButton>
+        </Link>
+      </ListItem>
+
+      {/* <ListItem disablePadding>
+        <Link href="/sales" passHref>
+          <ListItemButton>
+            <ListItemIcon>
+              <PointOfSaleIcon />
+            </ListItemIcon>
+            <ListItemText primary="Sales" />
+          </ListItemButton>
+        </Link>
+      </ListItem> */}
+    </List>
     </div>
   );
 
@@ -123,20 +168,6 @@ function ResponsiveDrawer(props) {
           ml: { sm: `${drawerWidth}px` },
         }}
       >
-        {/* <Toolbar>
-          <IconButton
-            color="inherit"
-            aria-label="open drawer"
-            edge="start"
-            onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { sm: 'none' } }}
-          >
-            <MenuIcon />
-          </IconButton>
-          <Typography variant="h6" noWrap component="div">
-            Inventory
-          </Typography>
-        </Toolbar> */}
       </AppBar>
       <Box
         component="nav"
@@ -171,18 +202,6 @@ function ResponsiveDrawer(props) {
           {drawer}
         </Drawer>
       </Box>
-      {/* <Box
-        component="main"
-        sx={{ flexGrow: 1, p: 3, width: { sm: `calc(100% - ${drawerWidth}px)` } }}
-      >
-        <Toolbar />
-        <Typography sx={{ marginBottom: 2 }}>
-         value of Inventory
-        </Typography>
-        <Typography sx={{ marginBottom: 2 }}>
-          Inventory
-        </Typography>
-      </Box> */}
     </Box>
   );
 }
