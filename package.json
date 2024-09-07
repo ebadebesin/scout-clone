@@ -13,16 +13,20 @@
     "@emotion/react": "^11.13.3",
     "@emotion/styled": "^11.13.0",
     "@mui/icons-material": "^6.0.1",
-    "@mui/material": "^6.0.1",
+    "@mui/material": "^6.0.2",
+    "@mui/x-date-pickers": "^7.16.0",
     "date-fns": "^3.6.0",
     "firebase": "^10.13.1",
+    "jspdf": "^2.5.1",
     "next": "14.2.7",
     "openai": "^4.57.0",
     "react": "^18",
+    "react-csv": "^2.2.2",
     "react-dom": "^18",
     "recharts": "^2.12.7",
     "stripe": "^16.8.0",
-    "uuid": "^10.0.0"
+    "uuid": "^10.0.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "eslint": "^8",
