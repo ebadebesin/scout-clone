@@ -8,7 +8,7 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import ResponsiveDrawer from '@/components/ResponsiveDrawer';
 import { useUser } from '@clerk/nextjs';
-import { doc, collection, getDoc, writeBatch } from 'firebase/firestore';
+import { doc, collection, getDocs, writeBatch } from 'firebase/firestore';
 import { db } from '@/firebase';
 import { format, isValid } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid'; // Import UUID generator
@@ -29,37 +29,32 @@ export default function Sales() {
     setSnackbarOpen(false);
   };
 
-  // Fetch sales data from Firestore
-  const displaySales = async () => {
+  // Fetch sales data from the 'sales' subcollection
+const displaySales = async () => {
     if (!isLoaded || !isSignedIn || !user) {
       alert('You must be signed in to view your sales.');
       return;
     }
-
+  
     try {
-      const userDocRef = doc(collection(db, 'users'), user.id);
-      const salesSnapshot = await getDoc(userDocRef);
-
-      if (salesSnapshot.exists()) {
-        const userData = salesSnapshot.data();
-        const soldItems = userData.sales || [];
-        
-        // Ensure each sold item has a valid date before setting state
-        const validatedSales = soldItems.map(item => ({
-          ...item,
-          soldDate: isValid(new Date(item.soldDate)) ? item.soldDate : null,
-        }));
-
-        setSales(validatedSales);
-      } else {
-        console.log('No sales found for this user.');
-        setSales([]);  // Clear state if no sales found
-      }
+      const salesCollectionRef = collection(db, 'users', user.id, 'sales');
+      const salesSnapshot = await getDocs(salesCollectionRef);
+  
+      const soldItems = salesSnapshot.docs.map(doc => doc.data());
+  
+      // Ensure each sold item has a valid date before setting state
+      const validatedSales = soldItems.map(item => ({
+        ...item,
+        soldDate: isValid(new Date(item.soldDate)) ? item.soldDate : null,
+      }));
+  
+      setSales(validatedSales);
     } catch (error) {
       console.error('Error fetching sales:', error);
       alert('An error occurred while fetching your sales. Please try again.');
     }
   };
+
 
   // Fetch sales on component mount or when the user changes
   useEffect(() => {
