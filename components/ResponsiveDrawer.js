@@ -21,7 +21,7 @@ import InventoryIcon from '@mui/icons-material/Inventory';
 import PaymentsIcon from '@mui/icons-material/Payments';
 import PointOfSaleIcon from '@mui/icons-material/PointOfSale';
 import HomeIcon from '@mui/icons-material/Home';
-import { SignedOut, SignedIn, UserButton } from '@clerk/nextjs';
+import { SignedOut, SignedIn, UserButton, useUser } from '@clerk/nextjs';
 import Link from 'next/link';
 
 const drawerWidth = 240;
@@ -30,6 +30,7 @@ function ResponsiveDrawer(props) {
   const { window } = props;
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [isClosing, setIsClosing] = React.useState(false);
+  const { user } = useUser();
 
   const handleDrawerClose = () => {
     setIsClosing(true);
@@ -62,9 +63,11 @@ function ResponsiveDrawer(props) {
       <SignedIn> 
         <UserButton />
         {/* make a new line */}
-        <br />
-        <br />
-        @username
+        {user ? (
+        <Typography>{user.firstName} {user.lastName}</Typography>
+        ) : (
+        <Typography>Loading...</Typography> // Optionally display a loading message
+        )}
       </SignedIn>
       </ListItem>
      </List>

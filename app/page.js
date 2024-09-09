@@ -314,7 +314,17 @@ export default function Home() {
         {pantry.length === 0 ? (
         <Box textAlign="center" p={5}>
             <Typography variant="h4">No item found</Typography>
-            <Typography variant="body1">Click + icon to get started.</Typography>
+            <Typography variant="body1">Click -
+                <Fab
+                    color="primary"
+                    aria-label="add"
+                    size='small'
+                    onClick={handleAddItemClick}
+                >
+                    <AddIcon />
+                </Fab> 
+                
+                - to get started.</Typography>
         </Box>
         ) : (
           <Table>
