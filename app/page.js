@@ -233,6 +233,42 @@ export default function Home() {
     setEditDialogOpen(true);
   };
 
+  // Mark item as sold function:
+  const markAsSold = async (item) => {
+    if (!isLoaded || !isSignedIn || !user) {
+      alert('You must be signed in to mark an item as sold.');
+      return;
+    }
+  
+    try {
+      const userDocRef = doc(collection(db, 'users'), user.id);
+      const userDocSnap = await getDoc(userDocRef);
+      const batch = writeBatch(db);
+  
+      // Remove the item from the inventory
+      if (userDocSnap.exists()) {
+        const userData = userDocSnap.data();
+        const updatedItems = userData.items.filter((inventoryItem) => inventoryItem.id !== item.id);
+        batch.update(userDocRef, { items: updatedItems });
+  
+        // Add the item to the sales collection
+        const salesDocRef = doc(collection(db, 'users', user.id, 'sales'), item.id);
+        batch.set(salesDocRef, { ...item, soldDate: new Date().toISOString() });
+  
+        await batch.commit();
+  
+        setSnackbarMessage('Item marked as sold and moved to sales!');
+        setSnackbarOpen(true);
+  
+        // Refresh inventory after marking an item as sold
+        await displayInventory();
+      }
+    } catch (error) {
+      console.error('Error marking item as sold:', error);
+      alert('An error occurred while marking the item as sold. Please try again.');
+    }
+  };
+
   return (
     <Box sx={{ display: 'flex', height: '100vh' }}>
       <ResponsiveDrawer />
@@ -315,6 +351,11 @@ export default function Home() {
                     {/* Delete button */}
                     <IconButton onClick={() => deleteItem(item.name)}>
                     <DeleteIcon color="error" />
+                    </IconButton>
+
+                    {/*Mark Sold Button */}
+                    <IconButton onClick={() => markAsSold(item)}>
+                    <Typography variant="h6" color="green">$</Typography>
                     </IconButton>
                   </TableCell>
                 </TableRow>
