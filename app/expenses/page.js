@@ -13,6 +13,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit'
 import { Snackbar } from '@mui/material';
 import ResponsiveDrawer from '@/components/ResponsiveDrawer';
+import ChatSupport from '@/components/chatsupport';
 // import { useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
 import { doc, collection, getDoc, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
@@ -243,6 +244,7 @@ export default function Home() {
   return (
     <Box sx={{ display: 'flex', height: '100vh' }}>
       <ResponsiveDrawer />
+      <ChatSupport/>
 
       <Snackbar
             open={snackbarOpen}

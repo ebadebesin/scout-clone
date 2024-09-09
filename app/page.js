@@ -8,6 +8,7 @@ import {
 } from '@mui/material';
 import Grid from '@mui/material/Grid2';
 import AddIcon from '@mui/icons-material/Add';
+import { ChatBubble } from '@mui/icons-material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit'
 import ResponsiveDrawer from '@/components/ResponsiveDrawer';
@@ -19,6 +20,7 @@ import SearchBar from '../components/SearchBar'; // Import SearchBar component
 import { Snackbar } from '@mui/material';
 import { format } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid'; // Import UUID generator
+import ChatSupport from '@/components/chatsupport';
 
 export default function Home() {
   const { isLoaded, isSignedIn, user } = useUser();
@@ -272,6 +274,7 @@ export default function Home() {
   return (
     <Box sx={{ display: 'flex', height: '100vh' }}>
       <ResponsiveDrawer />
+      <ChatSupport/>
       <Snackbar
                   open={snackbarOpen}
                   autoHideDuration={6000}
@@ -360,7 +363,7 @@ export default function Home() {
                     <EditIcon color="primary" />
                     </IconButton>
                     </Tooltip>
-                    
+
                     {/* Delete button */}  
                     <Tooltip title= "Delete">
                     <IconButton onClick={() => deleteItem(item.name)}>
@@ -391,6 +394,7 @@ export default function Home() {
         >
           <AddIcon />
         </Fab>
+
         </Box>
 
         <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)}>

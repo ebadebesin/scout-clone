@@ -7,6 +7,7 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import ResponsiveDrawer from '@/components/ResponsiveDrawer';
+import ChatSupport from '@/components/chatsupport';
 import { useUser } from '@clerk/nextjs';
 import { doc, collection, getDocs, writeBatch } from 'firebase/firestore';
 import { db } from '@/firebase';
@@ -108,6 +109,7 @@ const displaySales = async () => {
   return (
     <Box sx={{ display: 'flex', height: '100vh' }}>
       <ResponsiveDrawer />
+      <ChatSupport/>
       <Snackbar
         open={snackbarOpen}
         autoHideDuration={6000}
