@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import {
   Box, Container, Typography, TextField, Select, MenuItem, Modal, Checkbox,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
-   IconButton, Fab, Dialog, DialogTitle, DialogContent, DialogActions, Button
+   IconButton, Fab, Dialog, DialogTitle, DialogContent, DialogActions, Button,
+   Tooltip
 } from '@mui/material';
 import Grid from '@mui/material/Grid2';
 import AddIcon from '@mui/icons-material/Add';
@@ -331,13 +332,19 @@ export default function Home() {
                   <TableCell>{format(new Date(expense.purchaseDate), 'MMM dd, yyyy')}</TableCell>
                   <TableCell>
                     {/* Edit button */}
+                    <Tooltip title= "Edit">
                     <IconButton onClick={() => handleEditClick(expense)}>
                     <EditIcon color="primary" />
                     </IconButton>
+                    </Tooltip>
+                    
                     {/* Delete button */}
+                    <Tooltip title= "Delete">
                     <IconButton onClick={() => deleteExpense(expense.name)}>
                     <DeleteIcon color="error" />
                     </IconButton>
+                    </Tooltip>
+
                   </TableCell>
                 </TableRow>
               ))}

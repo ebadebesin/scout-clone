@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import {
-  Box, Container, Typography, TextField, Select, MenuItem, Modal, Checkbox,
+  Box, Container, Typography, TextField, Select, MenuItem, Tooltip, Modal, Checkbox,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
   IconButton, Fab, Dialog, DialogTitle, DialogContent, DialogActions, Button
 } from '@mui/material';
@@ -355,17 +355,24 @@ export default function Home() {
                   <TableCell>{format(new Date(item.purchaseDate), 'MMM dd, yyyy')}</TableCell>
                   <TableCell>
                     {/* Edit button */}
+                    <Tooltip title= "Edit">
                     <IconButton onClick={() => handleEditClick(item)}>
                     <EditIcon color="primary" />
                     </IconButton>
-                    {/* Delete button */}
+                    </Tooltip>
+                    
+                    {/* Delete button */}  
+                    <Tooltip title= "Delete">
                     <IconButton onClick={() => deleteItem(item.name)}>
                     <DeleteIcon color="error" />
-                    </IconButton>
+                    </IconButton> 
+                    </Tooltip>
 
                     {/*Mark Sold Button */}
                     <IconButton onClick={() => markAsSold(item)}>
+                    <Tooltip title="Mark as Sold"> 
                     <Typography variant="h6" color="green">$</Typography>
+                    </Tooltip>
                     </IconButton>
                   </TableCell>
                 </TableRow>
