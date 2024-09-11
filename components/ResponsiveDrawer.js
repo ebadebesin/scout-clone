@@ -73,19 +73,26 @@ function ResponsiveDrawer(props) {
      </List>
       <Divider />
       <List>
-  {/* <ListItem disablePadding>
+  
+
+  {/*Dashboard*/}
+<List>
+<ListItem disablePadding>
     <Link href="/dashboard" passHref>
-      <ListItemButton>
+      <ListItemButton >
         <ListItemIcon>
-          <HomeIcon />
+          <InventoryIcon />
         </ListItemIcon>
         <ListItemText primary="Dashboard" />
       </ListItemButton>
     </Link>
-  </ListItem> */}
+  </ListItem>
+  </List>
+  <Divider />
+
 
   <ListItem disablePadding>
-    <Link href="/" passHref>
+    <Link href="/dashboard" passHref>
       <ListItemButton >
         <ListItemIcon>
           <InventoryIcon />
@@ -143,6 +150,10 @@ function ResponsiveDrawer(props) {
           </ListItemButton>
         </Link>
       </ListItem>
+
+
+
+
 
       {/* <ListItem disablePadding>
         <Link href="/sales" passHref>
