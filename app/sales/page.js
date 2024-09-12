@@ -1,17 +1,19 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import {  
-    Box, Container, Typography, Table, TableBody, TableCell, TableContainer,
-    TableHead, TableRow, Paper, Fab, Modal, TextField, Button, Snackbar 
+import { 
+  Box, Container, Typography, Table, TableBody, TableCell, TableContainer, 
+  TableHead, TableRow, Paper, Fab, Modal, Grid, TextField, Button, Snackbar, IconButton 
 } from '@mui/material';
 import Grid from '@mui/material/Grid2';
 import AddIcon from '@mui/icons-material/Add';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
 import ResponsiveDrawer from '@/components/ResponsiveDrawer';
 import Export from '@/components/SalesExport'
 import ChatSupport from '@/components/chatsupport';
 import { useUser } from '@clerk/nextjs';
-import { doc, collection, getDocs, writeBatch } from 'firebase/firestore';
+import { doc, collection, getDocs, writeBatch, setDoc, deleteDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/firebase';
 import { format, isValid } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid'; // Import UUID generator
@@ -27,58 +29,43 @@ export default function Sales() {
   const [itemName, setItemName] = useState('');
   const [size, setSize] = useState('');
   const [sku, setSku] = useState('');
-  const [price, setPrice] = useState('');
+  const [purchasePrice, setPurchasePrice] = useState('');
+  const [salePrice, setSalePrice] = useState('');
   const [date, setDate] = useState('');
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [selectedSale, setSelectedSale] = useState(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   const handleSnackbarClose = () => {
     setSnackbarOpen(false);
   };
 
   // Fetch sales data from the 'sales' subcollection
-const displaySales = async () => {
+  const displaySales = async () => {
     if (!isLoaded || !isSignedIn || !user) {
       alert('You must be signed in to view your sales.');
       return;
     }
-  
+
     try {
       const salesCollectionRef = collection(db, 'users', user.id, 'sales');
       const salesSnapshot = await getDocs(salesCollectionRef);
-  
+
       const soldItems = salesSnapshot.docs.map(doc => doc.data());
-  
+
       // Ensure each sold item has a valid date before setting state
       const validatedSales = soldItems.map(item => ({
         ...item,
         soldDate: isValid(new Date(item.soldDate)) ? item.soldDate : null,
       }));
-  
+
       setSales(validatedSales);
     } catch (error) {
       console.error('Error fetching sales:', error);
       alert('An error occurred while fetching your sales. Please try again.');
     }
   };
-
-  // Filter the inventory based on the search query
-  // const filteredInventory = pantry.filter(
-  //   (item) =>
-  //     item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-  //     item.SKU.toLowerCase().includes(searchQuery.toLowerCase())
-  // );
-
-  // Filter the inventory based on the search query
-  useEffect(() => {
-    setFilteredSales(
-      sales.filter(
-        (item) =>
-          item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.SKU.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    );
-  }, [searchQuery, sales]);
 
   // Fetch sales on component mount or when the user changes
   useEffect(() => {
@@ -106,7 +93,8 @@ const displaySales = async () => {
       name: itemName,
       size: size,
       SKU: sku,
-      purchasePrice: price,
+      purchasePrice: purchasePrice.replace('$', ''), // Remove dollar sign if entered
+      salePrice: salePrice.replace('$', ''), // Remove dollar sign if entered
       soldDate: parsedDate.toISOString(), // Ensure valid ISO format date
     };
 
@@ -126,6 +114,59 @@ const displaySales = async () => {
     } catch (error) {
       console.error('Error adding sale:', error);
       alert('An error occurred while adding the sale. Please try again.');
+    }
+  };
+
+  // Handle edit click
+  const handleEditClick = (sale) => {
+    setSelectedSale(sale);
+    setEditDialogOpen(true);
+  };
+
+  // Handle save changes for edit
+  const handleSaveChanges = async () => {
+    if (!selectedSale) return;
+
+    const updatedSale = {
+      ...selectedSale,
+      purchasePrice: selectedSale.purchasePrice.replace('$', ''),
+      salePrice: selectedSale.salePrice.replace('$', ''),
+      soldDate: new Date(selectedSale.soldDate).toISOString()
+    };
+
+    try {
+      const userDocRef = doc(collection(db, 'users'), user.id);
+      const saleDocRef = doc(userDocRef, 'sales', selectedSale.id);
+      await setDoc(saleDocRef, updatedSale, { merge: true });
+
+      setSnackbarMessage('Sale updated successfully!');
+      setSnackbarOpen(true);
+      setEditDialogOpen(false);
+      displaySales();
+    } catch (error) {
+      console.error('Error updating sale:', error);
+      alert('An error occurred while updating the sale. Please try again.');
+    }
+  };
+
+  // Handle delete click
+  const handleDeleteClick = async (sale) => {
+    if (!isLoaded || !isSignedIn || !user) {
+      alert('You must be signed in to delete a sale.');
+      return;
+    }
+
+    try {
+      const userDocRef = doc(collection(db, 'users'), user.id);
+      const saleDocRef = doc(userDocRef, 'sales', sale.id);
+      await deleteDoc(saleDocRef);
+
+      setSnackbarMessage('Sale deleted successfully!');
+      setSnackbarOpen(true);
+      displaySales();
+    } catch (error) {
+      console.error('Error deleting sale:', error);
+      alert('An error occurred while deleting the sale. Please try again.');
     }
   };
 
@@ -189,8 +230,11 @@ const displaySales = async () => {
                   <TableCell>Name</TableCell>
                   <TableCell>SKU</TableCell>
                   <TableCell>Size</TableCell>
+                  <TableCell>Purchase Price</TableCell>
                   <TableCell>Sale Price</TableCell>
                   <TableCell>Sale Date</TableCell>
+                  <TableCell>Edit</TableCell>
+                  <TableCell>Delete</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -200,8 +244,19 @@ const displaySales = async () => {
                     <TableCell>{item.SKU}</TableCell>
                     <TableCell>{item.size}</TableCell>
                     <TableCell>${Number(item.purchasePrice).toFixed(2)}</TableCell>
+                    <TableCell>${Number(item.salePrice).toFixed(2)}</TableCell>
                     <TableCell>
                       {item.soldDate ? format(new Date(item.soldDate), 'MMM dd, yyyy') : 'Invalid date'}
+                    </TableCell>
+                    <TableCell>
+                      <IconButton onClick={() => handleEditClick(item)}>
+                        <EditIcon color="primary" />
+                      </IconButton>
+                    </TableCell>
+                    <TableCell>
+                      <IconButton onClick={() => handleDeleteClick(item)}>
+                        <DeleteIcon color="error" />
+                      </IconButton>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -270,12 +325,21 @@ const displaySales = async () => {
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
-                  required
-                  label="Sale Price"
+                  label="Purchase Price"
                   fullWidth
                   placeholder="e.g., 100"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
+                  value={purchasePrice}
+                  onChange={(e) => setPurchasePrice(e.target.value)}
+                  sx={{ marginBottom: '10px' }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Sale Price"
+                  fullWidth
+                  placeholder="e.g., 200"
+                  value={salePrice}
+                  onChange={(e) => setSalePrice(e.target.value)}
                   sx={{ marginBottom: '10px' }}
                 />
               </Grid>
@@ -301,6 +365,94 @@ const displaySales = async () => {
             </Box>
           </Box>
         </Modal>
+
+        {/* Modal for editing a sale */}
+        <Modal open={editDialogOpen} onClose={() => setEditDialogOpen(false)}>
+          <Box
+            sx={{
+              padding: '20px',
+              backgroundColor: 'white',
+              margin: '100px auto',
+              maxWidth: '650px',
+              borderRadius: '8px',
+              boxShadow: 24,
+            }}
+          >
+            <Typography variant="h6" sx={{ marginBottom: '20px' }}>Edit Sale</Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Item Name"
+                  fullWidth
+                  value={selectedSale?.name || ''}
+                  onChange={(e) =>
+                    setSelectedSale({ ...selectedSale, name: e.target.value })
+                  }
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Size"
+                  fullWidth
+                  value={selectedSale?.size || ''}
+                  onChange={(e) =>
+                    setSelectedSale({ ...selectedSale, size: e.target.value })
+                  }
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="SKU"
+                  fullWidth
+                  value={selectedSale?.SKU || ''}
+                  onChange={(e) =>
+                    setSelectedSale({ ...selectedSale, SKU: e.target.value })
+                  }
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Purchase Price"
+                  fullWidth
+                  value={selectedSale?.purchasePrice || ''}
+                  onChange={(e) =>
+                    setSelectedSale({ ...selectedSale, purchasePrice: e.target.value })
+                  }
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Sale Price"
+                  fullWidth
+                  value={selectedSale?.salePrice || ''}
+                  onChange={(e) =>
+                    setSelectedSale({ ...selectedSale, salePrice: e.target.value })
+                  }
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Sale Date"
+                  fullWidth
+                  type="date"
+                  InputLabelProps={{ shrink: true }}
+                  value={selectedSale?.soldDate ? format(new Date(selectedSale?.soldDate), 'yyyy-MM-dd') : ''}
+                  onChange={(e) =>
+                    setSelectedSale({ ...selectedSale, soldDate: e.target.value })
+                  }
+                />
+              </Grid>
+            </Grid>
+
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
+              <Button onClick={() => setEditDialogOpen(false)} sx={{ marginRight: '10px' }}>Cancel</Button>
+              <Button variant="contained" color="primary" onClick={handleSaveChanges}>
+                Save Changes
+              </Button>
+            </Box>
+          </Box>
+        </Modal>
+
       </Box>
     </Box>
   );
