@@ -55,7 +55,7 @@ export default function Contact() {
   return (
     <Box sx={{ maxWidth: 600, margin: "0 auto", padding: 3 }}>
       <ResponsiveDrawer />
-      <Typography variant="h4" mb={2}>Contact Us!</Typography>
+      <Typography variant="h3" mb={2}>Contact Us!</Typography>
       <form onSubmit={handleSubmit}>
         <TextField
           label="Name"

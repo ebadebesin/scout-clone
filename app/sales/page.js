@@ -1,12 +1,14 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { 
-  Box, Container, Typography, Table, TableBody, TableCell, TableContainer, 
-  TableHead, TableRow, Paper, Fab, Modal, Grid, TextField, Button, Snackbar 
+import {  
+    Box, Container, Typography, Table, TableBody, TableCell, TableContainer,
+    TableHead, TableRow, Paper, Fab, Modal, TextField, Button, Snackbar 
 } from '@mui/material';
+import Grid from '@mui/material/Grid2';
 import AddIcon from '@mui/icons-material/Add';
 import ResponsiveDrawer from '@/components/ResponsiveDrawer';
+import Export from '@/components/SalesExport'
 import ChatSupport from '@/components/chatsupport';
 import { useUser } from '@clerk/nextjs';
 import { doc, collection, getDocs, writeBatch } from 'firebase/firestore';
@@ -18,6 +20,10 @@ export default function Sales() {
   const { isLoaded, isSignedIn, user } = useUser();
   const [sales, setSales] = useState([]);
   const [openDialog, setOpenDialog] = useState(false);
+
+  const [filteredSales, setFilteredSales] = useState([]);
+  const [searchQuery, setSearchQuery] = useState(''); // State for managing search query
+
   const [itemName, setItemName] = useState('');
   const [size, setSize] = useState('');
   const [sku, setSku] = useState('');
@@ -56,6 +62,23 @@ const displaySales = async () => {
     }
   };
 
+  // Filter the inventory based on the search query
+  // const filteredInventory = pantry.filter(
+  //   (item) =>
+  //     item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  //     item.SKU.toLowerCase().includes(searchQuery.toLowerCase())
+  // );
+
+  // Filter the inventory based on the search query
+  useEffect(() => {
+    setFilteredSales(
+      sales.filter(
+        (item) =>
+          item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          item.SKU.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    );
+  }, [searchQuery, sales]);
 
   // Fetch sales on component mount or when the user changes
   useEffect(() => {
@@ -117,7 +140,14 @@ const displaySales = async () => {
         message={snackbarMessage}
       />
       <Box component="main" sx={{ flexGrow: 1, padding: 3, position: 'relative' }}>
-        <Typography variant="h4" sx={{ marginBottom: 2 }}>Sales</Typography>
+        <Typography variant="h3" sx={{ marginBottom: 2 }}>Sales</Typography>
+
+        {/* Export Button */}
+        <Fab color="primary"
+          aria-label="add"
+          sx={{ position: 'fixed', top: 16, right: 80 }}>
+                <Export filteredSales={filteredSales} />
+        </Fab>
 
         <TableContainer component={Paper}>
           {sales.length === 0 ? (
@@ -179,6 +209,7 @@ const displaySales = async () => {
             <Grid container spacing={2}>
               <Grid item xs={12} sm={6}>
                 <TextField
+                  required
                   label="Item Name"
                   fullWidth
                   placeholder="Enter the name of the item"
@@ -201,6 +232,7 @@ const displaySales = async () => {
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
+                  required
                   label="SKU"
                   fullWidth
                   placeholder="e.g., 1234"
@@ -211,6 +243,7 @@ const displaySales = async () => {
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
+                  required
                   label="Sale Price"
                   fullWidth
                   placeholder="e.g., 100"
@@ -221,6 +254,7 @@ const displaySales = async () => {
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
+                  required
                   label="Sale Date"
                   fullWidth
                   type="date"

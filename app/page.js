@@ -12,6 +12,7 @@ import { ChatBubble } from '@mui/icons-material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit'
 import ResponsiveDrawer from '@/components/ResponsiveDrawer';
+import Export from '@/components/Export'
 // import { useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
 import { doc, collection, getDoc, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
@@ -33,6 +34,7 @@ export default function Home() {
   const [sku, setSku] = useState('');
   const [size, setSize] = useState('');
 
+  const [filteredInventory, setFilteredInventory] = useState([]);
   const [searchQuery, setSearchQuery] = useState(''); // State for managing search query
   const [statusFilter, setStatusFilter] = useState('All');
   const [platformFilter, setPlatformFilter] = useState('All');
@@ -207,12 +209,23 @@ export default function Home() {
     }
   };
 
+  // // Filter the inventory based on the search query
+  // const filteredInventory = pantry.filter(
+  //   (item) =>
+  //     item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  //     item.SKU.toLowerCase().includes(searchQuery.toLowerCase())
+  // );
+
   // Filter the inventory based on the search query
-  const filteredInventory = pantry.filter(
-    (item) =>
-      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.SKU.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  useEffect(() => {
+    setFilteredInventory(
+      pantry.filter(
+        (item) =>
+          item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          item.SKU.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    );
+  }, [searchQuery, pantry]);
 
   // Fetch inventory on component mount or when the user changes
   useEffect(() => {
@@ -282,7 +295,13 @@ export default function Home() {
                   message={snackbarMessage}
       />
       <Box component="main" sx={{ flexGrow: 1, padding: 3, position: 'relative' }}>
-       <Typography variant="h4" sx={{ marginBottom: 2 }}>Inventory</Typography>
+       <Typography variant="h3" sx={{ marginBottom: 2 }}>Inventory</Typography>
+
+       <Fab color="primary"
+          aria-label="add"
+          sx={{ position: 'fixed', top: 16, right: 80 }}>
+                <Export filteredInventory={filteredInventory} />
+        </Fab>
 
         <Grid container spacing={2} sx={{ marginBottom: 2 }}>
           <Grid item= "true" xs={12} sm={6} md={3}>
@@ -469,6 +488,7 @@ export default function Home() {
     <Grid container spacing={2}>
       <Grid item xs={12} sm={6}>
         <TextField
+          required
           label="Item Name"
           fullWidth
           placeholder="Enter the name of the item"
@@ -492,16 +512,19 @@ export default function Home() {
 
       <Grid item xs={12} sm={6}>
         <TextField
+          required
           label="SKU"
           fullWidth
           value={sku}
           onChange={(e) => setSku(e.target.value)}
+          helperText="if not available, 000000"
           sx={{ minWidth: '300px', marginBottom: '10px' }}
         />
       </Grid>
 
       <Grid item xs={12} sm={6}>
         <TextField
+          required
           label="Purchase Price"
           fullWidth
           placeholder="0.00 "
@@ -515,6 +538,7 @@ export default function Home() {
 
       <Grid item xs={12} sm={6}>
         <TextField
+          required
           label="Purchase Date"
           fullWidth
           value={date}

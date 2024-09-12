@@ -254,7 +254,7 @@ export default function Home() {
         />
 
       <Box component="main" sx={{ flexGrow: 1, padding: 3, position: 'relative' }}>
-        <Typography variant="h4" sx={{ marginBottom: 2 }} >Expenses</Typography>
+        <Typography variant="h3" sx={{ marginBottom: 2 }} >Expenses</Typography>
 
         <Grid container spacing={2} sx={{ marginBottom: 2 }}>
           <Grid item="true" xs={12} sm={6} md={3}>
@@ -433,6 +433,7 @@ export default function Home() {
             <Grid container spacing={2}>
             <Grid item xs={12} sm={6}>
                 <TextField
+                required
                 label="Item Name"
                 fullWidth
                 placeholder="Enter the name of the expense"
@@ -467,6 +468,7 @@ export default function Home() {
             
             <Grid item xs={12} sm={6}>
                 <TextField
+                required
                 label="Quantity"
                 fullWidth
                 placeholder="Enter a number"
@@ -479,6 +481,7 @@ export default function Home() {
             
             <Grid item xs={12} sm={6}>
                 <TextField
+                required
                 label="Purchase Price per item"
                 fullWidth
                 placeholder="0.00 "
@@ -492,6 +495,7 @@ export default function Home() {
 
             <Grid item xs={12} sm={6}>
                 <TextField
+                required
                 label="Purchase Date"
                 fullWidth
                 value={date}
