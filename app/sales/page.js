@@ -142,12 +142,39 @@ const displaySales = async () => {
       <Box component="main" sx={{ flexGrow: 1, padding: 3, position: 'relative' }}>
         <Typography variant="h3" sx={{ marginBottom: 2 }}>Sales</Typography>
 
-        {/* Export Button */}
+        {/* Export Button
         <Fab color="primary"
           aria-label="add"
           sx={{ position: 'fixed', top: 16, right: 80 }}>
                 <Export filteredSales={filteredSales} />
-        </Fab>
+        </Fab> */}
+
+       {/* Button for Export */}
+       <Box
+          component="div"
+          sx={{
+            position: 'fixed',
+            top: 16,
+            right: 80,
+            backgroundColor: 'primary.main',
+            color: 'white',
+            borderRadius: '50%',
+            width: 56,
+            height: 56,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            border: 'none',
+            cursor: 'pointer',
+            boxShadow: 3,
+            '&:hover': {
+              backgroundColor: 'primary.dark',
+            },
+          }}
+        >
+          <Export filteredSales={filteredSales} />
+        </Box>
+
 
         <TableContainer component={Paper}>
           {sales.length === 0 ? (

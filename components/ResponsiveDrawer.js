@@ -92,7 +92,7 @@ function ResponsiveDrawer(props) {
 
 
   <ListItem disablePadding>
-    <Link href="/dashboard" passHref>
+    <Link href="/" passHref>
       <ListItemButton >
         <ListItemIcon>
           <InventoryIcon />

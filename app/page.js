@@ -27,7 +27,7 @@ export default function Home() {
   const { isLoaded, isSignedIn, user } = useUser();
   const [pantry, setPantry] = useState([]);
   // const router = useRouter();
-  // const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(false);
   const [itemName, setItemName] = useState('');
   const [date, setDate] = useState('');
   const [price, setPrice] = useState('');
@@ -297,11 +297,38 @@ export default function Home() {
       <Box component="main" sx={{ flexGrow: 1, padding: 3, position: 'relative' }}>
        <Typography variant="h3" sx={{ marginBottom: 2 }}>Inventory</Typography>
 
-       <Fab color="primary"
-          aria-label="add"
+       {/* <Fab color="primary"
+          aria-label="export"
           sx={{ position: 'fixed', top: 16, right: 80 }}>
                 <Export filteredInventory={filteredInventory} />
-        </Fab>
+        </Fab> */}
+
+        <Box
+          component="div"
+          sx={{
+            position: 'fixed',
+            top: 16,
+            right: 80,
+            backgroundColor: 'primary.main',
+            color: 'white',
+            borderRadius: '50%',
+            width: 56,
+            height: 56,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            border: 'none',
+            cursor: 'pointer',
+            boxShadow: 3,
+            '&:hover': {
+              backgroundColor: 'primary.dark',
+            },
+          }}
+        >
+          {/* The Export component */}
+          <Export filteredInventory={filteredInventory} />
+        </Box>
+
 
         <Grid container spacing={2} sx={{ marginBottom: 2 }}>
           <Grid item= "true" xs={12} sm={6} md={3}>

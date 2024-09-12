@@ -26,6 +26,9 @@ import { v4 as uuidv4 } from 'uuid'; // Import UUID generator
 export default function Home() {
     const { isLoaded, isSignedIn, user } = useUser();
     const [expenses, setExpenses] = useState([]);
+
+    const [selectedExpenses, setSelectedExpenses] = useState([]); // Track selected expenses
+
     // const router = useRouter();
     const [openDialog, setOpenDialog] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -136,6 +139,46 @@ export default function Home() {
     }
     };
 
+
+    //////////bulk delete
+    const bulkDeleteExpenses = async () => {
+      if (!isLoaded || !isSignedIn || !user) {
+        alert('You must be signed in to delete expenses.');
+        return;
+      }
+    
+      try {
+        const userDocRef = doc(db, 'users', user.id);
+        const userDocSnap = await getDoc(userDocRef);
+    
+        if (userDocSnap.exists()) {
+          const userData = userDocSnap.data();
+          const updatedExpenses = userData.expenses.filter(
+            (expense) => !selectedExpenses.includes(expense.id)
+          );
+    
+          const batch = writeBatch(db);
+          selectedExpenses.forEach(expenseId => {
+            const expenseDocRef = doc(collection(userDocRef, 'expenses'), expenseId);
+            batch.delete(expenseDocRef);
+          });
+    
+          await batch.commit();
+    
+          // Update the user document with new expenses
+          await setDoc(userDocRef, { expenses: updatedExpenses }, { merge: true });
+    
+          setExpenses(updatedExpenses);
+          setSnackbarMessage('Selected expenses deleted successfully!');
+          setSnackbarOpen(true);
+          setSelectedExpenses([]); // Clear selection
+        }
+      } catch (error) {
+        console.error('Error deleting expenses:', error);
+        alert('An error occurred while deleting expenses. Please try again.');
+      }
+    };
+    
 
 ///////////////edit
     const editExpense = async (expenseId, updatedItem) => {
@@ -261,6 +304,9 @@ export default function Home() {
             <SearchBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
           </Grid>
 
+                    
+
+          
           {/* <Grid item xs={6} sm={3} md={2}>
             <Select
               value={statusFilter}
@@ -306,9 +352,19 @@ export default function Home() {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell padding="checkbox">
-                  <Checkbox />
-                </TableCell>
+              <TableCell padding="checkbox">
+                <Checkbox
+                  checked={selectedExpenses.length === filteredExpenses.length && filteredExpenses.length > 0}
+                  indeterminate={selectedExpenses.length > 0 && selectedExpenses.length < filteredExpenses.length}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedExpenses(filteredExpenses.map(expense => expense.id)); // Select all
+                    } else {
+                      setSelectedExpenses([]); // Deselect all
+                    }
+                  }}
+                />
+              </TableCell>
                 <TableCell>Name</TableCell>
                 <TableCell>Quantity</TableCell>
                 <TableCell>Tax</TableCell>
@@ -316,6 +372,17 @@ export default function Home() {
                 <TableCell>Total</TableCell>
                 <TableCell>Purchase Date</TableCell>
                 <TableCell> Edit</TableCell>
+                <Tooltip title= "Delete Selected">
+            <IconButton
+            variant="contained"
+            color="error"
+            onClick={bulkDeleteExpenses}
+            disabled={selectedExpenses.length === 0}
+            sx={{ margin: '10px' }}
+            >
+               <DeleteIcon color="error" />
+          </IconButton>
+          </Tooltip>
                 
               </TableRow>
             </TableHead>
@@ -323,13 +390,22 @@ export default function Home() {
               {filteredExpenses.map((expense, index) => (
                 <TableRow key={expense.id}>
                   <TableCell padding="checkbox">
-                    <Checkbox />
+                    <Checkbox
+                      checked={selectedExpenses.includes(expense.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedExpenses([...selectedExpenses, expense.id]); // Add to selection
+                        } else {
+                          setSelectedExpenses(selectedExpenses.filter(id => id !== expense.id)); // Remove from selection
+                        }
+                      }}
+                    />
                   </TableCell>
                   <TableCell>{expense.name}</TableCell>
                   <TableCell>{expense.quantity}</TableCell>
                   <TableCell>{expense.tax}</TableCell>
                   <TableCell>${Number(expense.purchasePrice).toFixed(2)}</TableCell>
-                  <TableCell>{expense.totalPrice}</TableCell> 
+                  <TableCell>${Number(expense.totalPrice).toFixed(2)}</TableCell>
                   {/* edit total calculation later */}
                   <TableCell>{format(new Date(expense.purchaseDate), 'MMM dd, yyyy')}</TableCell>
                   <TableCell>
