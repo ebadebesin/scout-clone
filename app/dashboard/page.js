@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { Box, Typography, Grid, Paper, MenuItem, Select, InputLabel, FormControl } from '@mui/material';
+import { useState, useEffect, useCallback } from 'react';
+import { Box, Typography, Paper, MenuItem, Select, InputLabel, FormControl, Grid2 } from '@mui/material';
+import Grid from '@mui/material/Grid2'
 import ResponsiveDrawer from '@/components/ResponsiveDrawer';
 import { useUser } from '@clerk/nextjs';
 import { doc, collection, getDoc, getDocs } from 'firebase/firestore';
@@ -20,71 +21,76 @@ export default function Dashboard() {
   const [graphType, setGraphType] = useState('inventoryValue'); // Default graph type: Inventory Value
   const [graphData, setGraphData] = useState([]);
 
-  // Fetch inventory and sales data
-  const fetchInventoryAndSalesData = async () => {
+  // Memoize fetchInventoryAndSalesData to prevent re-creation on each render
+  const fetchInventoryAndSalesData = useCallback(async () => {
     if (!isLoaded || !isSignedIn) return;
-
+  
     try {
-      // Fetch inventory
       const userDocRef = doc(collection(db, "users"), user.id);
       const inventorySnapshot = await getDocs(collection(userDocRef, "items"));
       const inventoryData = inventorySnapshot.docs.map(doc => doc.data());
-      setInventoryItems(inventoryData);
-
-      // Calculate total inventory value
+      
+      // Log the data to check its structure
+      console.log("Inventory Data:", inventoryData);
+  
+      // Safely calculate total inventory value
       const totalInventoryValue = inventoryData.reduce((acc, item) => {
         const purchasePrice = parseFloat(item.purchasePrice || 0);
-        return acc + (isNaN(purchasePrice) ? 0 : purchasePrice); // Safeguard against NaN
+  
+        // Log each item's purchasePrice to check its value
+        console.log(`Item: ${item.name}, Purchase Price: ${item.purchasePrice}, Parsed: ${purchasePrice}`);
+  
+        return acc + (isNaN(purchasePrice) ? 0 : purchasePrice);
       }, 0);
+  
+      // Set the calculated inventory value
       setInventoryValue(totalInventoryValue);
-
-      // Fetch sales
+  
+      // Fetch sales data (this part remains the same)
       const salesSnapshot = await getDocs(collection(userDocRef, "sales"));
       const salesData = salesSnapshot.docs.map(doc => doc.data());
       setSalesItems(salesData);
-
-      // Calculate total sales and profit
+  
       let totalSalesValue = 0;
       let totalProfitValue = 0;
-
+  
       salesData.forEach(sale => {
-        const salePrice = parseFloat(sale.salePrice || 0); // Use salePrice here
+        const salePrice = parseFloat(sale.salePrice || 0);
         const purchasePrice = parseFloat(sale.purchasePrice || 0);
-        const profit = salePrice - purchasePrice; // Correct profit calculation
+        const profit = salePrice - purchasePrice;
         totalSalesValue += isNaN(salePrice) ? 0 : salePrice;
         totalProfitValue += isNaN(profit) ? 0 : profit;
       });
-
+  
       setTotalSales(totalSalesValue);
       setTotalProfit(totalProfitValue);
-
-      // Generate data for the graph
+  
       generateGraphData(inventoryData, salesData);
     } catch (error) {
       console.error("Error fetching data: ", error);
     }
-  };
+  }, [isLoaded, isSignedIn, user]);
+  
 
   const generateGraphData = (inventoryData, salesData) => {
     let filteredInventory = filterDataByTimeRange(inventoryData);
     let filteredSales = filterDataByTimeRange(salesData);
 
-    // Based on graph type, decide what data to display
     let data = [];
     if (graphType === 'inventoryValue') {
       data = filteredInventory.map(item => ({
         date: item.purchaseDate,
-        value: parseFloat(item.purchasePrice || 0)
+        value: parseFloat(item.purchasePrice || 0),
       }));
     } else if (graphType === 'totalSales') {
       data = filteredSales.map(sale => ({
         date: sale.soldDate,
-        value: parseFloat(sale.salePrice || 0)
+        value: parseFloat(sale.salePrice || 0),
       }));
     } else if (graphType === 'realizedProfit') {
       data = filteredSales.map(sale => ({
         date: sale.soldDate,
-        value: parseFloat(sale.salePrice) - parseFloat(sale.purchasePrice) // Correct profit calculation
+        value: parseFloat(sale.salePrice) - parseFloat(sale.purchasePrice),
       }));
     }
 
@@ -109,14 +115,15 @@ export default function Dashboard() {
 
   const handleGraphTypeChange = (event) => {
     setGraphType(event.target.value);
-    generateGraphData(inventoryItems, salesItems); // Regenerate graph data based on selected graph type
+    generateGraphData(inventoryItems, salesItems);
   };
 
   useEffect(() => {
     if (user) {
       fetchInventoryAndSalesData();
     }
-  }, [user, timeRange, graphType]);
+  }, [user, timeRange, graphType, fetchInventoryAndSalesData]);
+
 
   return (
     <Box sx={{ display: 'flex', height: '100vh' }}>

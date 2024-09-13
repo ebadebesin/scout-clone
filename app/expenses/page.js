@@ -352,19 +352,6 @@ export default function Home() {
           <Table>
             <TableHead>
               <TableRow>
-              <TableCell padding="checkbox">
-                <Checkbox
-                  checked={selectedExpenses.length === filteredExpenses.length && filteredExpenses.length > 0}
-                  indeterminate={selectedExpenses.length > 0 && selectedExpenses.length < filteredExpenses.length}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      setSelectedExpenses(filteredExpenses.map(expense => expense.id)); // Select all
-                    } else {
-                      setSelectedExpenses([]); // Deselect all
-                    }
-                  }}
-                />
-              </TableCell>
                 <TableCell>Name</TableCell>
                 <TableCell>Quantity</TableCell>
                 <TableCell>Tax</TableCell>
@@ -372,35 +359,12 @@ export default function Home() {
                 <TableCell>Total</TableCell>
                 <TableCell>Purchase Date</TableCell>
                 <TableCell> Edit</TableCell>
-                <Tooltip title= "Delete Selected">
-            <IconButton
-            variant="contained"
-            color="error"
-            onClick={bulkDeleteExpenses}
-            disabled={selectedExpenses.length === 0}
-            sx={{ margin: '10px' }}
-            >
-               <DeleteIcon color="error" />
-          </IconButton>
-          </Tooltip>
-                
+                <TableCell>Delete</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {filteredExpenses.map((expense, index) => (
                 <TableRow key={expense.id}>
-                  <TableCell padding="checkbox">
-                    <Checkbox
-                      checked={selectedExpenses.includes(expense.id)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedExpenses([...selectedExpenses, expense.id]); // Add to selection
-                        } else {
-                          setSelectedExpenses(selectedExpenses.filter(id => id !== expense.id)); // Remove from selection
-                        }
-                      }}
-                    />
-                  </TableCell>
                   <TableCell>{expense.name}</TableCell>
                   <TableCell>{expense.quantity}</TableCell>
                   <TableCell>{expense.tax}</TableCell>
@@ -415,10 +379,12 @@ export default function Home() {
                     <EditIcon color="primary" />
                     </IconButton>
                     </Tooltip>
+                    </TableCell>
                     
+                    <TableCell>
                     {/* Delete button */}
                     <Tooltip title= "Delete">
-                    <IconButton onClick={() => deleteExpense(expense.name)}>
+                    <IconButton onClick={() => deleteExpense(expense.id)}>
                     <DeleteIcon color="error" />
                     </IconButton>
                     </Tooltip>

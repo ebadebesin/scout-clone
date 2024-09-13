@@ -129,7 +129,7 @@ export default function Home() {
 
       if (userDocSnap.exists()) {
         const userData = userDocSnap.data();
-        const updatedItems = userData.items.filter(itemE => itemE.name !== item);
+        const updatedItems = userData.items.filter(itemE => itemE.id !== item);
         await setDoc(userDocRef, { items: updatedItems }, { merge: true });
 
         const itemDocRef = doc(collection(userDocRef, 'items'), item);
@@ -235,7 +235,7 @@ export default function Home() {
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Delete">
-                        <IconButton onClick={() => deleteItem(item.name)}>
+                        <IconButton onClick={() => deleteItem(item.id)}>
                           <DeleteIcon color="error" />
                         </IconButton>
                       </Tooltip>

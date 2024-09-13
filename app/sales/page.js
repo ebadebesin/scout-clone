@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { 
   Box, Container, Typography, Table, TableBody, TableCell, TableContainer, 
-  TableHead, TableRow, Paper, Fab, Modal, Grid, TextField, Button, Snackbar, IconButton 
+  TableHead, TableRow, Paper, Fab, Modal, TextField, Button, Snackbar, IconButton 
 } from '@mui/material';
 import Grid from '@mui/material/Grid2';
 import AddIcon from '@mui/icons-material/Add';
@@ -170,6 +170,17 @@ export default function Sales() {
     }
   };
 
+  // Filter the inventory based on the search query
+  useEffect(() => {
+    setFilteredSales(
+      sales.filter(
+        (item) =>
+          item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          item.SKU.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    );
+  }, [searchQuery, sales]);
+
   return (
     <Box sx={{ display: 'flex', height: '100vh' }}>
       <ResponsiveDrawer />
@@ -182,13 +193,6 @@ export default function Sales() {
       />
       <Box component="main" sx={{ flexGrow: 1, padding: 3, position: 'relative' }}>
         <Typography variant="h3" sx={{ marginBottom: 2 }}>Sales</Typography>
-
-        {/* Export Button
-        <Fab color="primary"
-          aria-label="add"
-          sx={{ position: 'fixed', top: 16, right: 80 }}>
-                <Export filteredSales={filteredSales} />
-        </Fab> */}
 
        {/* Button for Export */}
        <Box
