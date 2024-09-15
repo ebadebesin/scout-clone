@@ -1,14 +1,31 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { Box, Typography, Paper, MenuItem, Select, InputLabel, FormControl, Grid2 } from '@mui/material';
-import Grid from '@mui/material/Grid2'
+import { useState, useEffect } from 'react';
+import { Box, Typography, Paper, MenuItem, Select, Grid } from '@mui/material';
 import ResponsiveDrawer from '@/components/ResponsiveDrawer';
 import { useUser } from '@clerk/nextjs';
-import { doc, collection, getDoc, getDocs } from 'firebase/firestore';
+import { doc, collection, getDocs } from 'firebase/firestore';
 import { db } from '@/firebase';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { subDays, subWeeks, subMonths, subYears, isAfter } from 'date-fns';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer
+} from 'recharts';
+import {
+  subDays,
+  subWeeks,
+  subMonths,
+  subYears,
+  isAfter,
+  format,
+  isValid,
+  compareAsc
+} from 'date-fns';
 
 export default function Dashboard() {
   const { isLoaded, isSignedIn, user } = useUser();
@@ -18,7 +35,7 @@ export default function Dashboard() {
   const [inventoryItems, setInventoryItems] = useState([]);
   const [salesItems, setSalesItems] = useState([]);
   const [timeRange, setTimeRange] = useState('24H');
-  const [graphType, setGraphType] = useState('inventoryValue'); // Default graph type: Inventory Value
+  const [graphType, setGraphType] = useState('inventoryValue'); // Default graph type
   const [graphData, setGraphData] = useState([]);
 
   // Fetch inventory and sales data
@@ -35,7 +52,7 @@ export default function Dashboard() {
       // Calculate total inventory value
       const totalInventoryValue = inventoryData.reduce((acc, item) => {
         const purchasePrice = parseFloat(item.purchasePrice || 0);
-        return acc + (isNaN(purchasePrice) ? 0 : purchasePrice); // Safeguard against NaN
+        return acc + (isNaN(purchasePrice) ? 0 : purchasePrice);
       }, 0);
       setInventoryValue(totalInventoryValue);
 
@@ -49,50 +66,98 @@ export default function Dashboard() {
       let totalProfitValue = 0;
 
       salesData.forEach(sale => {
-        const salePrice = parseFloat(sale.salePrice || 0); // Use salePrice here
+        const salePrice = parseFloat(sale.salePrice || 0);
         const purchasePrice = parseFloat(sale.purchasePrice || 0);
-        const profit = salePrice - purchasePrice; // Correct profit calculation
+        const profit = salePrice - purchasePrice;
         totalSalesValue += isNaN(salePrice) ? 0 : salePrice;
         totalProfitValue += isNaN(profit) ? 0 : profit;
       });
 
       setTotalSales(totalSalesValue);
       setTotalProfit(totalProfitValue);
-
-      // Generate data for the graph
-      generateGraphData(inventoryData, salesData);
     } catch (error) {
       console.error("Error fetching data: ", error);
     }
   };
 
   const generateGraphData = (inventoryData, salesData) => {
-    let filteredInventory = filterDataByTimeRange(inventoryData);
-    let filteredSales = filterDataByTimeRange(salesData);
+    let filteredInventory = filterDataByTimeRange(inventoryData, 'purchaseDate');
+    let filteredSales = filterDataByTimeRange(salesData, 'soldDate');
 
-    // Based on graph type, decide what data to display
     let data = [];
+
     if (graphType === 'inventoryValue') {
-      data = filteredInventory.map(item => ({
-        date: item.purchaseDate,
-        value: parseFloat(item.purchasePrice || 0)
-      }));
+      data = filteredInventory
+        .map(item => {
+          let date;
+          if (item.purchaseDate && item.purchaseDate.toDate) {
+            date = item.purchaseDate.toDate(); // Handle Firestore Timestamp
+          } else {
+            date = new Date(item.purchaseDate);
+          }
+          if (!isValid(date)) return null; // Skip invalid dates
+          return {
+            date: date,
+            value: parseFloat(item.purchasePrice || 0)
+          };
+        })
+        .filter(Boolean)
+        .sort((a, b) => compareAsc(a.date, b.date));
     } else if (graphType === 'totalSales') {
-      data = filteredSales.map(sale => ({
-        date: sale.soldDate,
-        value: parseFloat(sale.salePrice || 0)
-      }));
+      data = filteredSales
+        .map(sale => {
+          let date;
+          if (sale.soldDate && sale.soldDate.toDate) {
+            date = sale.soldDate.toDate();
+          } else {
+            date = new Date(sale.soldDate);
+          }
+          if (!isValid(date)) return null;
+          return {
+            date: date,
+            value: parseFloat(sale.salePrice || 0)
+          };
+        })
+        .filter(Boolean)
+        .sort((a, b) => compareAsc(a.date, b.date));
     } else if (graphType === 'realizedProfit') {
-      data = filteredSales.map(sale => ({
-        date: sale.soldDate,
-        value: parseFloat(sale.salePrice) - parseFloat(sale.purchasePrice) // Correct profit calculation
-      }));
+      data = filteredSales
+        .map(sale => {
+          let date;
+          if (sale.soldDate && sale.soldDate.toDate) {
+            date = sale.soldDate.toDate();
+          } else {
+            date = new Date(sale.soldDate);
+          }
+          if (!isValid(date)) return null;
+          return {
+            date: date,
+            value: (parseFloat(sale.salePrice) || 0) - (parseFloat(sale.purchasePrice) || 0)
+          };
+        })
+        .filter(Boolean)
+        .sort((a, b) => compareAsc(a.date, b.date));
     }
 
     setGraphData(data);
   };
 
-  const filterDataByTimeRange = (data) => {
+  const filterDataByTimeRange = (data, dateField) => {
+    if (timeRange === 'ALL') {
+      // Filter out entries with invalid dates
+      return data.filter(item => {
+        const dateValue = item[dateField];
+        if (!dateValue) return false;
+        let itemDate;
+        if (dateValue.toDate) {
+          itemDate = dateValue.toDate();
+        } else {
+          itemDate = new Date(dateValue);
+        }
+        return isValid(itemDate);
+      });
+    }
+
     const now = new Date();
     let timeFilter;
 
@@ -101,7 +166,18 @@ export default function Dashboard() {
     else if (timeRange === '1M') timeFilter = subMonths(now, 1);
     else if (timeRange === '1Y') timeFilter = subYears(now, 1);
 
-    return data.filter(item => isAfter(new Date(item.purchaseDate || item.soldDate), timeFilter));
+    return data.filter(item => {
+      const dateValue = item[dateField];
+      if (!dateValue) return false;
+      let itemDate;
+      if (dateValue.toDate) {
+        itemDate = dateValue.toDate();
+      } else {
+        itemDate = new Date(dateValue);
+      }
+      if (!isValid(itemDate)) return false;
+      return isAfter(itemDate, timeFilter);
+    });
   };
 
   const handleTimeRangeChange = (event) => {
@@ -110,26 +186,35 @@ export default function Dashboard() {
 
   const handleGraphTypeChange = (event) => {
     setGraphType(event.target.value);
-    generateGraphData(inventoryItems, salesItems); // Regenerate graph data based on selected graph type
   };
 
   useEffect(() => {
     if (user) {
       fetchInventoryAndSalesData();
     }
-  }, [user, timeRange, graphType]);
+  }, [user]);
+
+  useEffect(() => {
+    if (inventoryItems.length > 0 || salesItems.length > 0) {
+      generateGraphData(inventoryItems, salesItems);
+    }
+  }, [inventoryItems, salesItems, timeRange, graphType]);
 
   return (
     <Box sx={{ display: 'flex', height: '100vh' }}>
       <ResponsiveDrawer />
       <Box component="main" sx={{ flexGrow: 1, padding: 3 }}>
-        <Typography variant="h4" sx={{ marginBottom: 2 }}>Your Inventory Value: ${isNaN(inventoryValue) ? '0.00' : inventoryValue.toFixed(2)}</Typography>
+        <Typography variant="h4" sx={{ marginBottom: 2 }}>
+          Your Inventory Value: ${isNaN(inventoryValue) ? '0.00' : inventoryValue.toFixed(2)}
+        </Typography>
 
         <Grid container spacing={2}>
           <Grid item xs={12} sm={4}>
             <Paper sx={{ padding: 2 }}>
               <Typography variant="h6">Total Inventory Value</Typography>
-              <Typography variant="h4">${isNaN(inventoryValue) ? '0.00' : inventoryValue.toFixed(2)}</Typography>
+              <Typography variant="h4">
+                ${isNaN(inventoryValue) ? '0.00' : inventoryValue.toFixed(2)}
+              </Typography>
             </Paper>
           </Grid>
 
@@ -155,9 +240,12 @@ export default function Dashboard() {
             <MenuItem value="1W">Last Week</MenuItem>
             <MenuItem value="1M">Last Month</MenuItem>
             <MenuItem value="1Y">Last Year</MenuItem>
+            <MenuItem value="ALL">All Time</MenuItem> {/* Added All Time option */}
           </Select>
 
-          <Typography variant="h5" sx={{ marginTop: 4 }}>Select Graph Type:</Typography>
+          <Typography variant="h5" sx={{ marginTop: 4 }}>
+            Select Graph Type:
+          </Typography>
           <Select value={graphType} onChange={handleGraphTypeChange}>
             <MenuItem value="inventoryValue">Inventory Value</MenuItem>
             <MenuItem value="totalSales">Total Sales</MenuItem>
@@ -175,9 +263,18 @@ export default function Dashboard() {
                 <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={graphData}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
+                    <XAxis
+                      dataKey="date"
+                      tickFormatter={(date) =>
+                        isValid(new Date(date)) ? format(new Date(date), 'MM/dd/yyyy') : ''
+                      }
+                    />
                     <YAxis />
-                    <Tooltip />
+                    <Tooltip
+                      labelFormatter={(label) =>
+                        isValid(new Date(label)) ? format(new Date(label), 'MM/dd/yyyy') : ''
+                      }
+                    />
                     <Legend />
                     <Line type="monotone" dataKey="value" stroke="#8884d8" />
                   </LineChart>
