@@ -1,329 +1,344 @@
-'use client'
+"use client";
+
 import { useState, useEffect } from 'react';
-import {
-  Box, Container, Typography, TextField, Select, MenuItem, Tooltip, Modal, Checkbox,
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
-  IconButton, Fab, Dialog, DialogTitle, DialogContent, DialogActions, Button, Snackbar
-} from '@mui/material';
-import Grid from '@mui/material/Grid2';
-import AddIcon from '@mui/icons-material/Add';
-import { ChatBubble } from '@mui/icons-material';
-import DeleteIcon from '@mui/icons-material/Delete';
-import EditIcon from '@mui/icons-material/Edit';
+import { Box, Typography, Paper, MenuItem, Select, Grid, Accordion, AccordionSummary, AccordionDetails } from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ResponsiveDrawer from '@/components/ResponsiveDrawer';
 import { useUser } from '@clerk/nextjs';
-import { doc, collection, getDoc, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { doc, collection, getDocs, onSnapshot } from 'firebase/firestore';
 import { db } from '@/firebase';
-import { format } from 'date-fns';
-import { v4 as uuidv4 } from 'uuid';
-import ChatSupport from '@/components/chatsupport';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer
+} from 'recharts';
+import {
+  subDays,
+  subWeeks,
+  subMonths,
+  subYears,
+  isAfter,
+  format,
+  isValid,
+  compareAsc
+} from 'date-fns';
 
-export default function Home() {
+export default function Dashboard() {
   const { isLoaded, isSignedIn, user } = useUser();
-  const [pantry, setPantry] = useState([]);
-  const [itemName, setItemName] = useState('');
-  const [date, setDate] = useState('');
-  const [price, setPrice] = useState('');
-  const [sku, setSku] = useState('');
-  const [size, setSize] = useState('');
-  const [openDialog, setOpenDialog] = useState(false);
-  const [newItem, setNewItem] = useState({
-    name: '',
-    size: '',
-    SKU: '',
-    purchasePrice: '',
-    purchaseDate: '',
-    status: '',
-  });
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
-  const [selectedItem, setSelectedItem] = useState(null);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [inventoryValue, setInventoryValue] = useState(0);
+  const [totalSales, setTotalSales] = useState(0);
+  const [totalProfit, setTotalProfit] = useState(0);
+  const [inventoryItems, setInventoryItems] = useState([]);
+  const [salesItems, setSalesItems] = useState([]);
+  const [timeRange, setTimeRange] = useState('24H');
+  const [graphType, setGraphType] = useState('inventoryValue');
+  const [graphData, setGraphData] = useState([]);
 
-  const handleSnackbarClose = () => {
-    setSnackbarOpen(false);
+  // Fetch inventory and sales data with real-time updates
+  const fetchInventoryAndSalesData = () => {
+    if (!isLoaded || !isSignedIn) return;
+
+    // Fetch real-time updates for inventory
+    const userDocRef = doc(collection(db, "users"), user.id);
+    const unsubscribeInventory = onSnapshot(collection(userDocRef, "items"), (snapshot) => {
+      const inventoryData = snapshot.docs.map(doc => doc.data());
+      setInventoryItems(inventoryData);
+
+      // Calculate total inventory value
+      const totalInventoryValue = inventoryData.reduce((acc, item) => {
+        const purchasePrice = parseFloat(item.purchasePrice || 0);
+        return acc + (isNaN(purchasePrice) ? 0 : purchasePrice);
+      }, 0);
+      setInventoryValue(totalInventoryValue);
+    });
+
+    // Fetch sales data (not real-time, if needed we can make it real-time)
+    getDocs(collection(userDocRef, "sales")).then(salesSnapshot => {
+      const salesData = salesSnapshot.docs.map(doc => doc.data());
+      setSalesItems(salesData);
+
+      // Calculate total sales and profit
+      let totalSalesValue = 0;
+      let totalProfitValue = 0;
+
+      salesData.forEach(sale => {
+        const salePrice = parseFloat(sale.salePrice || 0);
+        const purchasePrice = parseFloat(sale.purchasePrice || 0);
+        const profit = salePrice - purchasePrice;
+        totalSalesValue += isNaN(salePrice) ? 0 : salePrice;
+        totalProfitValue += isNaN(profit) ? 0 : profit;
+      });
+
+      setTotalSales(totalSalesValue);
+      setTotalProfit(totalProfitValue);
+    });
+
+    // Unsubscribe from Firestore updates when component unmounts
+    return () => unsubscribeInventory();
   };
 
-  const addItem = async (item) => {
-    if (!isLoaded || !isSignedIn || !user) {
-      alert('You must be signed in to add an item.');
-      return;
-    }
+  // Group inventory items by product name and exclude sold or deleted items
+  const groupItemsByName = (items) => {
+    const grouped = {};
+    items.forEach(item => {
+      // Exclude items that are sold, marked as moved to sales, or deleted
+      if (item.sold || item.status === 'sold' || item.status === 'movedToSales' || item.deleted) return;
 
-    try {
-      const userDocRef = doc(collection(db, 'users'), user.id);
-      const userDocSnap = await getDoc(userDocRef);
-      const batch = writeBatch(db);
+      const name = item.name || 'Unknown Item'; // Group by product name
+      const size = item.size || 'Unknown Size'; // Group by size within each name
 
-      let purchaseDate;
-      try {
-        purchaseDate = new Date(item.purchaseDate).toISOString();
-      } catch (error) {
-        console.error('Error parsing date:', error);
-        purchaseDate = 'Invalid Date';
+      if (!grouped[name]) {
+        grouped[name] = {};
       }
 
-      const itemData = {
-        id: uuidv4(),
-        name: item.name,
-        size: item.size,
-        SKU: item.SKU,
-        purchasePrice: item.purchasePrice,
-        purchaseDate: purchaseDate,
-      };
+      if (!grouped[name][size]) {
+        grouped[name][size] = [];
+      }
 
-      if (userDocSnap.exists()) {
-        const userData = userDocSnap.data();
-        const updatedItems = [...(userData.items || []), itemData];
-        batch.update(userDocRef, { items: updatedItems });
+      grouped[name][size].push(item);
+    });
+    return grouped;
+  };
+
+  const groupedItems = groupItemsByName(inventoryItems);
+
+  const generateGraphData = (inventoryData, salesData) => {
+    let filteredInventory = filterDataByTimeRange(inventoryData, 'purchaseDate');
+    let filteredSales = filterDataByTimeRange(salesData, 'soldDate');
+
+    let data = [];
+
+    if (graphType === 'inventoryValue') {
+      data = filteredInventory
+        .map(item => {
+          let date;
+          if (item.purchaseDate && item.purchaseDate.toDate) {
+            date = item.purchaseDate.toDate(); // Handle Firestore Timestamp
+          } else {
+            date = new Date(item.purchaseDate);
+          }
+          if (!isValid(date)) return null; // Skip invalid dates
+          return {
+            date: date,
+            value: parseFloat(item.purchasePrice || 0)
+          };
+        })
+        .filter(Boolean)
+        .sort((a, b) => compareAsc(a.date, b.date));
+    } else if (graphType === 'totalSales') {
+      data = filteredSales
+        .map(sale => {
+          let date;
+          if (sale.soldDate && sale.soldDate.toDate) {
+            date = sale.soldDate.toDate();
+          } else {
+            date = new Date(sale.soldDate);
+          }
+          if (!isValid(date)) return null;
+          return {
+            date: date,
+            value: parseFloat(sale.salePrice || 0)
+          };
+        })
+        .filter(Boolean)
+        .sort((a, b) => compareAsc(a.date, b.date));
+    } else if (graphType === 'realizedProfit') {
+      data = filteredSales
+        .map(sale => {
+          let date;
+          if (sale.soldDate && sale.soldDate.toDate) {
+            date = sale.soldDate.toDate();
+          } else {
+            date = new Date(sale.soldDate);
+          }
+          if (!isValid(date)) return null;
+          return {
+            date: date,
+            value: (parseFloat(sale.salePrice) || 0) - (parseFloat(sale.purchasePrice) || 0)
+          };
+        })
+        .filter(Boolean)
+        .sort((a, b) => compareAsc(a.date, b.date));
+    }
+
+    setGraphData(data);
+  };
+
+  const filterDataByTimeRange = (data, dateField) => {
+    if (timeRange === 'ALL') {
+      // Filter out entries with invalid dates
+      return data.filter(item => {
+        const dateValue = item[dateField];
+        if (!dateValue) return false;
+        let itemDate;
+        if (dateValue.toDate) {
+          itemDate = dateValue.toDate();
+        } else {
+          itemDate = new Date(dateValue);
+        }
+        return isValid(itemDate);
+      });
+    }
+
+    const now = new Date();
+    let timeFilter;
+
+    if (timeRange === '24H') timeFilter = subDays(now, 1);
+    else if (timeRange === '1W') timeFilter = subWeeks(now, 1);
+    else if (timeRange === '1M') timeFilter = subMonths(now, 1);
+    else if (timeRange === '1Y') timeFilter = subYears(now, 1);
+
+    return data.filter(item => {
+      const dateValue = item[dateField];
+      if (!dateValue) return false;
+      let itemDate;
+      if (dateValue.toDate) {
+        itemDate = dateValue.toDate();
       } else {
-        batch.set(userDocRef, { items: [itemData] });
+        itemDate = new Date(dateValue);
       }
-
-      const itemDocRef = doc(collection(userDocRef, 'items'), itemData.id);
-      batch.set(itemDocRef, itemData);
-      await batch.commit();
-
-      setSnackbarMessage('Item added successfully!');
-      setSnackbarOpen(true);
-
-      await displayInventory();
-    } catch (error) {
-      console.error('Error adding item:', error);
-      alert('An error occurred while adding the item. Please try again.');
-    }
+      if (!isValid(itemDate)) return false;
+      return isAfter(itemDate, timeFilter);
+    });
   };
 
-  const displayInventory = async () => {
-    if (!isLoaded || !isSignedIn || !user) {
-      alert('You must be signed in to view your inventory.');
-      return;
-    }
-
-    try {
-      const userDocRef = doc(collection(db, 'users'), user.id);
-      const userDocSnap = await getDoc(userDocRef);
-
-      if (userDocSnap.exists()) {
-        const userData = userDocSnap.data();
-        const items = userData.items || [];
-        setPantry(items);
-      } else {
-        setPantry([]);
-      }
-    } catch (error) {
-      console.error('Error fetching inventory:', error);
-      alert('An error occurred while fetching your inventory. Please try again.');
-    }
+  const handleTimeRangeChange = (event) => {
+    setTimeRange(event.target.value);
   };
 
-  const deleteItem = async (item) => {
-    if (!isLoaded || !isSignedIn || !user) {
-      alert('You must be signed in to delete an item.');
-      return;
-    }
-
-    try {
-      const userDocRef = doc(collection(db, 'users'), user.id);
-      const userDocSnap = await getDoc(userDocRef);
-
-      if (userDocSnap.exists()) {
-        const userData = userDocSnap.data();
-        const updatedItems = userData.items.filter(itemE => itemE.id !== item);
-        await setDoc(userDocRef, { items: updatedItems }, { merge: true });
-
-        const itemDocRef = doc(collection(userDocRef, 'items'), item);
-        await deleteDoc(itemDocRef);
-
-        setPantry(updatedItems);
-
-        setSnackbarMessage('Item deleted successfully!');
-        setSnackbarOpen(true);
-      }
-    } catch (error) {
-      console.error('Error deleting item:', error);
-      alert('An error occurred while deleting the item. Please try again.');
-    }
-  };
-
-  const handleAddItemClick = () => {
-    setOpenDialog(true);
-  };
-
-  const handleCloseDialog = () => {
-    setOpenDialog(false);
-    setNewItem({ name: itemName, size: size, SKU: sku, purchasePrice: price, purchaseDate: date });
+  const handleGraphTypeChange = (event) => {
+    setGraphType(event.target.value);
   };
 
   useEffect(() => {
     if (user) {
-      displayInventory();
+      fetchInventoryAndSalesData();
     }
   }, [user]);
+
+  useEffect(() => {
+    if (inventoryItems.length > 0 || salesItems.length > 0) {
+      generateGraphData(inventoryItems, salesItems);
+    }
+  }, [inventoryItems, salesItems, timeRange, graphType]);
 
   return (
     <Box sx={{ display: 'flex', height: '100vh' }}>
       <ResponsiveDrawer />
-      <ChatSupport />
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={6000}
-        onClose={handleSnackbarClose}
-        message={snackbarMessage}
-      />
-      <Box component="main" sx={{ flexGrow: 1, padding: 3, position: 'relative' }}>
-        <Typography variant="h4" sx={{ marginBottom: 2 }}>Inventory</Typography>
+      <Box component="main" sx={{ flexGrow: 1, padding: 3 }}>
+        <Typography variant="h4" sx={{ marginBottom: 2 }}>
+          Your Inventory Value: ${isNaN(inventoryValue) ? '0.00' : inventoryValue.toFixed(2)}
+        </Typography>
 
-        <TableContainer component={Paper}>
-          {pantry.length === 0 ? (
-            <Box textAlign="center" p={5}>
-              <Typography variant="h4">No item found</Typography>
-              <Typography variant="body1">
-                Click -
-                <Fab
-                  color="primary"
-                  aria-label="add"
-                  size="small"
-                  onClick={handleAddItemClick}
-                >
-                  <AddIcon />
-                </Fab>
-                - to get started.
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={4}>
+            <Paper sx={{ padding: 2 }}>
+              <Typography variant="h6">Total Inventory Value</Typography>
+              <Typography variant="h4">
+                ${isNaN(inventoryValue) ? '0.00' : inventoryValue.toFixed(2)}
               </Typography>
-            </Box>
-          ) : (
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell padding="checkbox">
-                    <Checkbox />
-                  </TableCell>
-                  <TableCell>Name</TableCell>
-                  <TableCell>SKU</TableCell>
-                  <TableCell>Size</TableCell>
-                  <TableCell>Purchase Price</TableCell>
-                  <TableCell>Purchase Date</TableCell>
-                  <TableCell>Edit</TableCell>
-                </TableRow>
-              </TableHead>
+            </Paper>
+          </Grid>
 
-              <TableBody>
-                {pantry.map((item, index) => (
-                  <TableRow key={item.id}>
-                    <TableCell padding="checkbox">
-                      <Checkbox />
-                    </TableCell>
-                    <TableCell>{item.name}</TableCell>
-                    <TableCell>{item.SKU}</TableCell>
-                    <TableCell>{item.size}</TableCell>
-                    <TableCell>${Number(item.purchasePrice).toFixed(2)}</TableCell>
-                    <TableCell>
-                      {(() => {
-                        try {
-                          return format(new Date(item.purchaseDate), 'MMM dd, yyyy');
-                        } catch (error) {
-                          console.error('Error formatting date:', error);
-                          return 'Invalid Date';
-                        }
-                      })()}
-                    </TableCell>
-                    <TableCell>
-                      {/* Edit and Delete buttons */}
-                      <Tooltip title="Edit">
-                        <IconButton onClick={() => setSelectedItem(item)}>
-                          <EditIcon color="primary" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Delete">
-                        <IconButton onClick={() => deleteItem(item.id)}>
-                          <DeleteIcon color="error" />
-                        </IconButton>
-                      </Tooltip>
-                    </TableCell>
-                  </TableRow>
+          <Grid item xs={12} sm={4}>
+            <Paper sx={{ padding: 2 }}>
+              <Typography variant="h6">Total Sales</Typography>
+              <Typography variant="h4">${totalSales.toFixed(2)}</Typography>
+            </Paper>
+          </Grid>
+
+          <Grid item xs={12} sm={4}>
+            <Paper sx={{ padding: 2 }}>
+              <Typography variant="h6">Total Profit</Typography>
+              <Typography variant="h4">${totalProfit.toFixed(2)}</Typography>
+            </Paper>
+          </Grid>
+        </Grid>
+
+        {/* Grouped Inventory Items */}
+        <Box sx={{ marginTop: 4 }}>
+          <Typography variant="h5">Inventory Items</Typography>
+          {Object.keys(groupedItems).map((name) => (
+            <Accordion key={name}>
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Typography variant="h6">{name}</Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                {Object.keys(groupedItems[name]).map((size) => (
+                  <Accordion key={size}>
+                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                      <Typography variant="subtitle1">Size {size}</Typography>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                      {groupedItems[name][size].map((item, index) => (
+                        <Typography key={index} variant="body2">
+                          Quantity: {item.quantity || 0} - Purchase Price: ${item.purchasePrice || 0}
+                        </Typography>
+                      ))}
+                    </AccordionDetails>
+                  </Accordion>
                 ))}
-              </TableBody>
-            </Table>
-          )}
-        </TableContainer>
+              </AccordionDetails>
+            </Accordion>
+          ))}
+        </Box>
 
-        <Fab
-          color="primary"
-          aria-label="add"
-          sx={{ position: 'fixed', top: 16, right: 16 }}
-          onClick={handleAddItemClick}
-        >
-          <AddIcon />
-        </Fab>
+        {/* Time Range and Graph Type Filters */}
+        <Box sx={{ marginTop: 4 }}>
+          <Typography variant="h5">Select Time Range:</Typography>
+          <Select value={timeRange} onChange={handleTimeRangeChange}>
+            <MenuItem value="24H">Last 24 Hours</MenuItem>
+            <MenuItem value="1W">Last Week</MenuItem>
+            <MenuItem value="1M">Last Month</MenuItem>
+            <MenuItem value="1Y">Last Year</MenuItem>
+            <MenuItem value="ALL">All Time</MenuItem> {/* Added All Time option */}
+          </Select>
 
-        {/* Modal for adding an item */}
-        <Modal open={openDialog} onClose={handleCloseDialog}>
-          <Box sx={{ padding: '20px', backgroundColor: 'white', margin: '100px auto', maxWidth: '650px', borderRadius: '8px', boxShadow: 24 }}>
-            <Typography variant="h6" sx={{ marginBottom: '20px' }}>Add New Item</Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Item Name"
-                  fullWidth
-                  placeholder="Enter the name of the item"
-                  helperText="e.g., Jordan 1"
-                  value={itemName}
-                  onChange={(e) => setItemName(e.target.value)}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Size"
-                  fullWidth
-                  value={size}
-                  helperText="e.g., 10"
-                  onChange={(e) => setSize(e.target.value)}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="SKU"
-                  fullWidth
-                  value={sku}
-                  onChange={(e) => setSku(e.target.value)}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Purchase Price"
-                  fullWidth
-                  placeholder="0.00"
-                  helperText="e.g., 100"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Purchase Date"
-                  fullWidth
-                  value={date}
-                  type="date"
-                  onChange={(e) => setDate(e.target.value)}
-                  InputLabelProps={{ shrink: true }}
-                />
-              </Grid>
+          <Typography variant="h5" sx={{ marginTop: 4 }}>
+            Select Graph Type:
+          </Typography>
+          <Select value={graphType} onChange={handleGraphTypeChange}>
+            <MenuItem value="inventoryValue">Inventory Value</MenuItem>
+            <MenuItem value="totalSales">Total Sales</MenuItem>
+            <MenuItem value="realizedProfit">Realized Profit</MenuItem>
+          </Select>
+        </Box>
+
+        {/* Reports Section */}
+        <Box sx={{ marginTop: 4 }}>
+          <Typography variant="h5">Reports</Typography>
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <Paper sx={{ padding: 2 }}>
+                <Typography variant="h6">Inventory and Sales Over Time</Typography>
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={graphData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis
+                      dataKey="date"
+                      tickFormatter={(date) =>
+                        isValid(new Date(date)) ? format(new Date(date), 'MM/dd/yyyy') : ''
+                      }
+                    />
+                    <YAxis />
+                    <Tooltip
+                      labelFormatter={(label) =>
+                        isValid(new Date(label)) ? format(new Date(label), 'MM/dd/yyyy') : ''
+                      }
+                    />
+                    <Legend />
+                    <Line type="monotone" dataKey="value" stroke="#8884d8" />
+                  </LineChart>
+                </ResponsiveContainer>
+              </Paper>
             </Grid>
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
-              <Button onClick={handleCloseDialog} sx={{ marginRight: '10px' }}>Cancel</Button>
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={() => {
-                  addItem({ name: itemName, size: size, SKU: sku, purchasePrice: price, purchaseDate: date });
-                  handleCloseDialog();
-                }}
-              >
-                Add
-              </Button>
-            </Box>
-          </Box>
-        </Modal>
+          </Grid>
+        </Box>
       </Box>
     </Box>
   );
