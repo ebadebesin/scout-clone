@@ -57,7 +57,7 @@ export default function Sales() {
       // Ensure each sold item has a valid date before setting state
       const validatedSales = soldItems.map(item => ({
         ...item,
-        soldDate: isValid(new Date(item.soldDate)) ? item.soldDate : null,
+        saleDate: isValid(new Date(item.saleDate)) ? item.saleDate : null,
       }));
 
       setSales(validatedSales);
@@ -95,7 +95,7 @@ export default function Sales() {
       SKU: sku,
       purchasePrice: purchasePrice.replace('$', ''), // Remove dollar sign if entered
       salePrice: salePrice.replace('$', ''), // Remove dollar sign if entered
-      soldDate: parsedDate.toISOString(), // Ensure valid ISO format date
+      saleDate: parsedDate.toISOString(), // Ensure valid ISO format date
     };
 
     try {
@@ -131,7 +131,7 @@ export default function Sales() {
       ...selectedSale,
       purchasePrice: selectedSale.purchasePrice.replace('$', ''),
       salePrice: selectedSale.salePrice.replace('$', ''),
-      soldDate: new Date(selectedSale.soldDate).toISOString()
+      saleDate: new Date(selectedSale.saleDate).toISOString()
     };
 
     try {
@@ -258,7 +258,7 @@ export default function Sales() {
                           return 'Invalid Date';
                         }
                       })()}
-                      {/* {item.soldDate ? format(new Date(item.soldDate), 'MMM dd, yyyy') : 'Invalid date'} */}
+                      {/* {item.saleDate ? format(new Date(item.saleDate), 'MMM dd, yyyy') : 'Invalid date'} */}
                     </TableCell>
                     <TableCell>
                       <IconButton onClick={() => handleEditClick(item)}>
@@ -448,9 +448,9 @@ export default function Sales() {
                   fullWidth
                   type="date"
                   InputLabelProps={{ shrink: true }}
-                  value={selectedSale?.soldDate ? format(new Date(selectedSale?.soldDate), 'yyyy-MM-dd') : ''}
+                  value={selectedSale?.saleDate ? format(new Date(selectedSale?.saleDate), 'yyyy-MM-dd') : ''}
                   onChange={(e) =>
-                    setSelectedSale({ ...selectedSale, soldDate: e.target.value })
+                    setSelectedSale({ ...selectedSale, saleDate: e.target.value })
                   }
                 />
               </Grid>
