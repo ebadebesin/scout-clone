@@ -109,7 +109,7 @@ export default function Dashboard() {
 
   const generateGraphData = (inventoryData, salesData) => {
     let filteredInventory = filterDataByTimeRange(inventoryData, 'purchaseDate');
-    let filteredSales = filterDataByTimeRange(salesData, 'soldDate');
+    let filteredSales = filterDataByTimeRange(salesData, 'saleDate');
 
     let data = [];
 
@@ -134,10 +134,10 @@ export default function Dashboard() {
       data = filteredSales
         .map(sale => {
           let date;
-          if (sale.soldDate && sale.soldDate.toDate) {
-            date = sale.soldDate.toDate();
+          if (sale.saleDate && sale.saleDate.toDate) {
+            date = sale.saleDate.toDate();
           } else {
-            date = new Date(sale.soldDate);
+            date = new Date(sale.saleDate);
           }
           if (!isValid(date)) return null;
           return {
@@ -151,10 +151,10 @@ export default function Dashboard() {
       data = filteredSales
         .map(sale => {
           let date;
-          if (sale.soldDate && sale.soldDate.toDate) {
-            date = sale.soldDate.toDate();
+          if (sale.saleDate && sale.saleDate.toDate) {
+            date = sale.saleDate.toDate();
           } else {
-            date = new Date(sale.soldDate);
+            date = new Date(sale.saleDate);
           }
           if (!isValid(date)) return null;
           return {

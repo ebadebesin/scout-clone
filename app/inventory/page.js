@@ -324,7 +324,7 @@ export default function Home() {
                   label="Item Name"
                   fullWidth
                   placeholder="Enter the name of the item"
-                  helperText="e.g., Jordan 1"
+                  helperText="e.g., Jordan 1 (green)"
                   value={itemName}
                   onChange={(e) => setItemName(e.target.value)}
                 />
@@ -334,7 +334,7 @@ export default function Home() {
                   label="Size"
                   fullWidth
                   value={size}
-                  helperText="e.g., 10"
+                  helperText="e.g., 10 or S/M"
                   onChange={(e) => setSize(e.target.value)}
                 />
               </Grid>
